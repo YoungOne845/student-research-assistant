@@ -1,0 +1,2 @@
+import { useAuth } from '../context/AuthContext';
+export function ProfilePage(){ const {user}=useAuth(); return <div className="card max-w-2xl"><h1 className="text-3xl font-bold">Profile</h1><div className="mt-6 space-y-3 text-slate-300"><p><b>Name:</b> {user?.name}</p><p><b>Email:</b> {user?.email}</p><p><b>Role:</b> {user?.role}</p><p className="text-sm text-slate-400">Profile editing endpoint can be expanded safely from the existing authenticated user model.</p></div></div> }

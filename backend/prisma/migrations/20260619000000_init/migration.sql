@@ -1,0 +1,46 @@
+CREATE TYPE "UserRole" AS ENUM ('STUDENT', 'ADMIN');
+CREATE TYPE "ProjectStatus" AS ENUM ('DRAFT', 'ACTIVE', 'ARCHIVED');
+CREATE TYPE "ContentStatus" AS ENUM ('GENERATED', 'SAVED', 'EXPORTED');
+CREATE TYPE "AIRequestStatus" AS ENUM ('SUCCESS', 'FAILED');
+
+CREATE TABLE "AcademicField" ("id" TEXT NOT NULL, "name" TEXT NOT NULL, "slug" TEXT NOT NULL, "description" TEXT NOT NULL, "isActive" BOOLEAN NOT NULL DEFAULT true, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "AcademicField_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "User" ("id" TEXT NOT NULL, "email" TEXT NOT NULL, "name" TEXT NOT NULL, "passwordHash" TEXT, "avatarUrl" TEXT, "googleId" TEXT, "role" "UserRole" NOT NULL DEFAULT 'STUDENT', "preferredFieldId" TEXT, "resetTokenHash" TEXT, "resetTokenExpiresAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "User_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "ResearchModule" ("id" TEXT NOT NULL, "name" TEXT NOT NULL, "slug" TEXT NOT NULL, "description" TEXT NOT NULL, "orderIndex" INTEGER NOT NULL DEFAULT 0, "isActive" BOOLEAN NOT NULL DEFAULT true, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "ResearchModule_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "AcademicFieldModule" ("id" TEXT NOT NULL, "academicFieldId" TEXT NOT NULL, "researchModuleId" TEXT NOT NULL, "enabled" BOOLEAN NOT NULL DEFAULT true, CONSTRAINT "AcademicFieldModule_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "ResearchTemplate" ("id" TEXT NOT NULL, "academicFieldId" TEXT NOT NULL, "researchModuleId" TEXT NOT NULL, "title" TEXT NOT NULL, "systemPrompt" TEXT NOT NULL, "userPrompt" TEXT NOT NULL, "temperature" DOUBLE PRECISION NOT NULL DEFAULT 0.7, "isActive" BOOLEAN NOT NULL DEFAULT true, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "ResearchTemplate_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "ResearchProject" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "academicFieldId" TEXT NOT NULL, "title" TEXT NOT NULL, "description" TEXT NOT NULL, "status" "ProjectStatus" NOT NULL DEFAULT 'DRAFT', "tags" TEXT[] DEFAULT ARRAY[]::TEXT[], "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "ResearchProject_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "GeneratedContent" ("id" TEXT NOT NULL, "projectId" TEXT, "userId" TEXT NOT NULL, "academicFieldId" TEXT NOT NULL, "researchModuleId" TEXT NOT NULL, "title" TEXT NOT NULL, "input" JSONB NOT NULL, "content" TEXT NOT NULL, "status" "ContentStatus" NOT NULL DEFAULT 'GENERATED', "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "GeneratedContent_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "ResearchSession" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "projectId" TEXT, "researchModuleId" TEXT, "title" TEXT NOT NULL, "messages" JSONB NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "ResearchSession_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "SavedProject" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "projectId" TEXT NOT NULL, "note" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "SavedProject_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "UserActivityLog" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "action" TEXT NOT NULL, "metadata" JSONB, "ipAddress" TEXT, "userAgent" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "UserActivityLog_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "AIRequest" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "provider" TEXT NOT NULL, "model" TEXT NOT NULL, "academicFieldId" TEXT, "researchModuleId" TEXT, "promptTokens" INTEGER NOT NULL DEFAULT 0, "completionTokens" INTEGER NOT NULL DEFAULT 0, "status" "AIRequestStatus" NOT NULL, "errorMessage" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "AIRequest_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Notification" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "title" TEXT NOT NULL, "message" TEXT NOT NULL, "isRead" BOOLEAN NOT NULL DEFAULT false, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "Notification_pkey" PRIMARY KEY ("id"));
+
+CREATE UNIQUE INDEX "AcademicField_name_key" ON "AcademicField"("name"); CREATE UNIQUE INDEX "AcademicField_slug_key" ON "AcademicField"("slug");
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email"); CREATE UNIQUE INDEX "User_googleId_key" ON "User"("googleId"); CREATE INDEX "User_email_idx" ON "User"("email");
+CREATE UNIQUE INDEX "ResearchModule_slug_key" ON "ResearchModule"("slug");
+CREATE UNIQUE INDEX "AcademicFieldModule_academicFieldId_researchModuleId_key" ON "AcademicFieldModule"("academicFieldId", "researchModuleId"); CREATE INDEX "AcademicFieldModule_academicFieldId_idx" ON "AcademicFieldModule"("academicFieldId"); CREATE INDEX "AcademicFieldModule_researchModuleId_idx" ON "AcademicFieldModule"("researchModuleId");
+CREATE UNIQUE INDEX "ResearchTemplate_academicFieldId_researchModuleId_key" ON "ResearchTemplate"("academicFieldId", "researchModuleId"); CREATE INDEX "ResearchTemplate_academicFieldId_researchModuleId_idx" ON "ResearchTemplate"("academicFieldId", "researchModuleId");
+CREATE INDEX "ResearchProject_userId_createdAt_idx" ON "ResearchProject"("userId", "createdAt"); CREATE INDEX "ResearchProject_academicFieldId_idx" ON "ResearchProject"("academicFieldId");
+CREATE INDEX "GeneratedContent_userId_createdAt_idx" ON "GeneratedContent"("userId", "createdAt"); CREATE INDEX "GeneratedContent_academicFieldId_researchModuleId_idx" ON "GeneratedContent"("academicFieldId", "researchModuleId");
+CREATE INDEX "ResearchSession_userId_updatedAt_idx" ON "ResearchSession"("userId", "updatedAt");
+CREATE UNIQUE INDEX "SavedProject_userId_projectId_key" ON "SavedProject"("userId", "projectId"); CREATE INDEX "SavedProject_userId_idx" ON "SavedProject"("userId");
+CREATE INDEX "UserActivityLog_userId_createdAt_idx" ON "UserActivityLog"("userId", "createdAt"); CREATE INDEX "AIRequest_userId_createdAt_idx" ON "AIRequest"("userId", "createdAt"); CREATE INDEX "Notification_userId_isRead_idx" ON "Notification"("userId", "isRead");
+
+ALTER TABLE "User" ADD CONSTRAINT "User_preferredFieldId_fkey" FOREIGN KEY ("preferredFieldId") REFERENCES "AcademicField"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "AcademicFieldModule" ADD CONSTRAINT "AcademicFieldModule_academicFieldId_fkey" FOREIGN KEY ("academicFieldId") REFERENCES "AcademicField"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "AcademicFieldModule" ADD CONSTRAINT "AcademicFieldModule_researchModuleId_fkey" FOREIGN KEY ("researchModuleId") REFERENCES "ResearchModule"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ResearchTemplate" ADD CONSTRAINT "ResearchTemplate_academicFieldId_fkey" FOREIGN KEY ("academicFieldId") REFERENCES "AcademicField"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ResearchTemplate" ADD CONSTRAINT "ResearchTemplate_researchModuleId_fkey" FOREIGN KEY ("researchModuleId") REFERENCES "ResearchModule"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ResearchProject" ADD CONSTRAINT "ResearchProject_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ResearchProject" ADD CONSTRAINT "ResearchProject_academicFieldId_fkey" FOREIGN KEY ("academicFieldId") REFERENCES "AcademicField"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "GeneratedContent" ADD CONSTRAINT "GeneratedContent_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "ResearchProject"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "GeneratedContent" ADD CONSTRAINT "GeneratedContent_researchModuleId_fkey" FOREIGN KEY ("researchModuleId") REFERENCES "ResearchModule"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ResearchSession" ADD CONSTRAINT "ResearchSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ResearchSession" ADD CONSTRAINT "ResearchSession_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "ResearchProject"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ResearchSession" ADD CONSTRAINT "ResearchSession_researchModuleId_fkey" FOREIGN KEY ("researchModuleId") REFERENCES "ResearchModule"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "SavedProject" ADD CONSTRAINT "SavedProject_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "SavedProject" ADD CONSTRAINT "SavedProject_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "ResearchProject"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "UserActivityLog" ADD CONSTRAINT "UserActivityLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "AIRequest" ADD CONSTRAINT "AIRequest_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
