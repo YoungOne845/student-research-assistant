@@ -7,10 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole { STUDENT ADMIN }
-enum ProjectStatus { DRAFT ACTIVE ARCHIVED }
-enum ContentStatus { GENERATED SAVED EXPORTED }
-enum AIRequestStatus { SUCCESS FAILED }
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ContentStatus {
+  GENERATED
+  SAVED
+  EXPORTED
+}
+
+enum AIRequestStatus {
+  SUCCESS
+  FAILED
+}
 
 model User {
   id                 String   @id @default(cuid())

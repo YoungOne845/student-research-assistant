@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/errors.js';
@@ -56,17 +57,19 @@ export async function generateContent(args: GenerateInput) {
     }).catch(() => undefined);
   }
 
-  const generated = await prisma.generatedContent.create({
-    data: {
-      userId: args.userId,
-      academicFieldId: field.id,
-      researchModuleId: module.id,
-      projectId: args.projectId,
-      title: `${field.name} ${module.name}`,
-      input: args.input,
-      content
-    }
-  });
+  const safeInput = JSON.parse(JSON.stringify(args.input)) as Prisma.InputJsonValue;
+
+const generated = await prisma.generatedContent.create({
+  data: {
+    userId: args.userId,
+    academicFieldId: field.id,
+    researchModuleId: module.id,
+    projectId: args.projectId,
+    title: `${field.name} ${module.name}`,
+    input: safeInput,
+    content
+  }
+});
 
   return generated;
 }
